@@ -1,0 +1,13 @@
+04d4d61fcbd41fb56fdc838b4e3de57f *DESCRIPTION
+fb2815ed208c6910c23fa5e5bf049dca *NAMESPACE
+2a92b0a025c681bec1868774c23f9ffe *NEWS.md
+ba84dfe3fcae3d87fc889f7e2d2f9220 *R/fusedTree.R
+eb00cdce69e2ac154ea5f3c29c562b77 *README.md
+9bac285a223cbbb34133701a97ae89bd *man/CVfoldsTree.Rd
+cdd3dbf6d6b4a23ecfc27869638be140 *man/Dat_Tree.Rd
+a31239b2a3502ddac524070d46949865 *man/PenOpt.Rd
+c8cd27f9a8f0629b72ec22577ce9d7c1 *man/figures/README-binary-example-1.png
+a9e4850eb94dd1e0bb753242abbd2c89 *man/figures/README-fit-fusedTree-1.png
+89493762b0f1b86ecd2934c8a2c7b998 *man/figures/README-fit-tree-1.png
+0dc71b9321bec5c7157046b5cd64d89d *man/fusedTree.Rd
+c30597f78c06e9b4f17123be8c48315e *man/predict.fusedTree.Rd
