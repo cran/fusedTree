@@ -7,9 +7,9 @@
 Dat_Tree(Tree, X, Z, LinVars = TRUE)
 }
 \arguments{
-\item{Tree}{A fitted tree object, created using \code{rpart}. Support for
-trees fitted with other packages (e.g., \code{partykit}) may be added in
-the future.}
+\item{Tree}{A fitted tree object, created using \pkg{rpart} or \pkg{partykit}.
+Must be an object of class \code{"rpart"} (from the \pkg{rpart} package) or
+\code{"constparty"} (from the \pkg{partykit} package).}
 
 \item{X}{A numeric omics data matrix with dimensions
 (sample size × number of omics variables). Must be a \code{matrix}.}
@@ -34,7 +34,9 @@ Each row corresponds to a sample.
 \item{Omics}{A matrix of omics data per leaf node. This matrix has
 dimensions: sample size × (number of leaf nodes × number of omics variables).
 For each observation, only the block of omics variables corresponding to its
-tree node is populated (other blocks are set to zero).}#'
+tree node is populated (other blocks are set to zero).
+If the matrix is high-dimensional, a sparse matrix is returned of class
+"dgCMatrix" for memory efficiency.}
 }
 }
 \description{

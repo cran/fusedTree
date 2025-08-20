@@ -13,6 +13,7 @@ fusedTree(
   model,
   lambda,
   alpha,
+  symFusion = TRUE,
   maxIter = 50,
   minSuccDiff = 10^(-10),
   dat = FALSE,
@@ -20,9 +21,9 @@ fusedTree(
 )
 }
 \arguments{
-\item{Tree}{The fitted tree object. Should be created using \code{rpart}.
-Support for other tree-fitting packages (e.g., \code{partykit}) may be
-added in the future.}
+\item{Tree}{A fitted tree object, created using \pkg{rpart} or \pkg{partykit}.
+Must be an object of class \code{"rpart"} (from the \pkg{rpart} package) or
+\code{"constparty"} (from the \pkg{partykit} package).}
 
 \item{X}{A matrix of omics data with dimensions (sample size × number of omics variables).}
 
@@ -44,7 +45,15 @@ One of: \code{"linear"}, \code{"logistic"}, or \code{"cox"}.}
 
 \item{lambda}{Numeric. Value for the standard ridge (L2) penalty.}
 
-\item{alpha}{Numeric. Value for the fusion penalty.}
+\item{alpha}{Numeric. Value for the fusion penalty.
+The fusion penalty is not incorporated when \code{alpha = 0} is specified.}
+
+\item{symFusion}{Logical. Whether fusion should be symmetric across nodes.
+Setting this parameter to \code{FALSE} induces asymmetric fusion. That is,
+nodes having more similar predictions (using only clinical variables)
+of the response will be shrunk more to each other than nodes having more
+distinct predictions. Setting to \code{FALSE} is not tested very well so
+use on your own risk. Defaults to \code{TRUE}.}
 
 \item{maxIter}{Integer. Maximum number of iterations for the IRLS (iterative
 reweighted least squares) algorithm. Used only when \code{model = "logistic"} or \code{"cox"}.
@@ -58,7 +67,7 @@ successive iterations of IRLS to declare convergence. Only used when
 (i.e., omics, clinical, and response). Defaults to \code{FALSE}.}
 
 \item{verbose}{Logical. Whether to print progress updates from the IRLS algorithm.
-Only applies to \code{model = "logistic"} or \code{"cox"}.}
+Only applies to \code{model = "logistic"} or \code{model ="cox"}.}
 }
 \value{
 A list with the following components:
@@ -67,7 +76,7 @@ A list with the following components:
 \item{Effects}{A named numeric vector of estimated effect sizes, including:
 intercepts (tree leaf nodes), omics effects (per node), and linear
 clinical effects (if \code{LinVars = TRUE}).}
-\item{Breslow}{(Optional) The breslow estimates of the baseline hazard \code{ht}
+\item{Breslow}{(Optional) The Breslow estimates of the baseline hazard \code{ht}
 and the cumulative baseline hazard \code{Ht} for each time point. Only returned for
 \code{model = "cox"}.}
 \item{Parameters}{A list of model parameters used in fitting (e.g.,
@@ -81,8 +90,9 @@ The returned list object is of class S3 for which predict() is available
 \description{
 Fits a fusedTree model by solving a penalized regression problem using
 either a linear, logistic, or Cox model. The model includes both a standard
-ridge (L2) penalty and an optional fusion penalty to encourage similarity
-between leaf node-specific omics effects.
+ridge (L2) penalty and a fusion penalty to encourage similarity
+between leaf node-specific omics effects. The fusion penalty can also be
+omitted by specifying \code{alpha = 0}.
 }
 \details{
 \strong{Linear model:} Estimated using a closed-form analytic solution.

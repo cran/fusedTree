@@ -7,7 +7,7 @@
 CVfoldsTree(Y, Tree, Z, model = NULL, kfold = 5, nrepeat = 3)
 }
 \arguments{
-\item{Y}{The response variable. Should be:
+\item{Y}{The response variable. Should be one of:
 \itemize{
 \item Numeric (for linear regression),
 \item Binary (encoded as 0 and 1, for logistic regression),
@@ -15,9 +15,9 @@ CVfoldsTree(Y, Tree, Z, model = NULL, kfold = 5, nrepeat = 3)
 }
 Only right-censored survival data is currently supported.}
 
-\item{Tree}{A fitted decision tree, typically created using \code{rpart}.
-Trees fitted with other packages (e.g., \code{partykit}) may be supported
-in future versions.}
+\item{Tree}{A fitted tree object, created using \pkg{rpart} or \pkg{partykit}.
+Must be an object of class \code{"rpart"} (from the \pkg{rpart} package) or
+\code{"constparty"} (from the \pkg{partykit} package).}
 
 \item{Z}{A \code{data.frame} of clinical variables used to fit the tree.
 This is used to determine node membership for balancing folds.}

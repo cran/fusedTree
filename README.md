@@ -9,7 +9,7 @@ in handling complex data structures.
 - The tree is built using **clinical variables only**.
 - The linear regression models within each leaf node use **omics
   variables only**.
-- Leaf‑node‑specific regression models are estimated via penalized
+- Leaf‑node‑specific regression models are estimated via a penalized
   likelihood, combining:
   - A standard **ridge (L2) penalty**
   - A **fusion penalty**, linking the regression models across leaf
@@ -18,7 +18,9 @@ in handling complex data structures.
     established signal in the clinical variables
 
 **Note:** Tree construction must be done externally (e.g., with the
-[`rpart`](https://cran.r-project.org/package=rpart) package in R).
+[`rpart`](https://cran.r-project.org/package=rpart) or
+[`partykit`](https://cran.r-project.org/package=partykit) packages in
+R).
 
 For full methodological details, see the
 [preprint](https://arxiv.org/abs/2411.02396).
@@ -28,7 +30,7 @@ For full methodological details, see the
 ## Installation
 
 ``` r
-# CRAN (when available)
+# CRAN
 install.packages("fusedTree")
 
 # Development version from GitHub
@@ -46,7 +48,8 @@ relationship with omics variables.
 ``` r
 library(fusedTree)
 if (!requireNamespace("rpart", quietly = TRUE)) install.packages("rpart")
-library(rpart)
+if (!requireNamespace("rpart.plot", quietly = TRUE)) install.packages("rpart.plot")
+library(rpart); library(rpart.plot)
 ```
 
 ### 1. Simulate Data
@@ -56,7 +59,6 @@ set.seed(10)
 p       <- 5       # Number of omics variables
 p_Clin  <- 5       # Number of clinical variables
 N       <- 100     # Sample size
-
 # Nonlinear function of clinical variables
 g <- function(z) {
   15 * sin(pi * z[,1] * z[,2]) +
@@ -92,18 +94,36 @@ rp     <- rpart(
 cp     <- rp$cptable[which.min(rp$cptable[, "xerror"]), "CP"]
 Treefit <- prune(rp, cp = cp)
 
-plot(Treefit, main = "Clinical-variable Tree")
-text(Treefit, use.n = TRUE)
+rpart.plot(Treefit,
+           type=5,
+           extra=1, 
+           box.palette="Pu",
+           branch.lty=8, 
+           shadow.col=0, 
+           nn=TRUE,
+           cex = 0.6)
 ```
 
 <img src="man/figures/README-fit-tree-1.png" width="100%" />
+
+``` r
+
+## the software also accepts tree fits from the `partykit` package:
+if (!requireNamespace("partykit", quietly = TRUE)) install.packages("partykit")
+if (!requireNamespace("coin", quietly = TRUE)) install.packages("coin") # also needs to be installed
+library(partykit)
+#> Loading required package: grid
+#> Loading required package: libcoin
+#> Loading required package: mvtnorm
+Treefit1 <- as.party(Treefit)
+```
 
 ### 3. (Optional) Understanding the Design Matrices
 
 Before fitting the model, it’s useful to understand how **fusedTree**
 internally represents the data to enable leaf-specific regression. Each
 **leaf node** of the tree gets its own (generalized) linear regression
-model. To support this, two large design matrices are constructed:
+model. To support this, two design matrices are constructed:
 
 - **Clinical design matrix** (`Clinical`):  
   A binary intercept indicator matrix of size `N × (# of leaf nodes)`.
@@ -114,7 +134,9 @@ model. To support this, two large design matrices are constructed:
   A matrix of size `N × (p × # of leaf nodes)` where `p` is the number
   of omics variables. For each leaf node, the corresponding block of
   columns contains the omics values **only for the observations in that
-  node**; entries are 0 elsewhere.
+  node**; entries are 0 elsewhere. When `p > N` (high-dimensional data),
+  the returned matrix is build using the \[`Matrix`\] package for memory
+  efficiency. The matrix is therefore of class `dgCMatrix`.
 
 These matrices are created automatically during model fitting, but you
 can inspect them yourself using the `Dat_Tree()` function:
@@ -212,7 +234,14 @@ fit$Effects     # Omics effects per leaf
 #> -0.9519646 -0.9519646  3.1750430  3.1750430  3.1750430  1.7737451  1.7737451 
 #>      x4_N7      x5_N2      x5_N6      x5_N7 
 #>  1.7737451 -1.9979752 -1.9979752 -1.9979752
-plot(fit$Tree)  # Underlying tree structure
+rpart.plot(fit$Tree,
+           type=5,
+           extra=1, 
+           box.palette="Pu",
+           branch.lty=8, 
+           shadow.col=0, 
+           nn=TRUE,
+           cex = 0.6) # Underlying tree structure
 ```
 
 <img src="man/figures/README-fit-fusedTree-1.png" width="100%" />
@@ -241,8 +270,8 @@ X_test <- matrix(rnorm(N_test * p), nrow = N_test)
 Y_test <- as.vector(g(Z_test) + X_test %*% betas + rnorm(N_test))
 
 # Generate predictions
-Preds <- predict(fit, newX = X_test, newY = Y_test, newZ = Z_test)
-PMSE  <- mean((Preds$Resp - Preds$Ypred)^2)
+Preds <- predict(fit, newX = X_test, newZ = Z_test)
+PMSE  <- mean((Y_test - Preds$Ypred)^2)
 PMSE
 #> [1] 15.03962
 ```
@@ -280,7 +309,15 @@ rp <- rpart::rpart(Y ~ ., data = dat,
                    method = "class", model = TRUE)
 cp <- rp$cptable[,1][which.min(rp$cptable[,4])]
 Treefit <- rpart::prune(rp, cp = cp)
-plot(Treefit)
+
+rpart.plot(Treefit,
+           type=5,
+           extra=1, 
+           box.palette="Pu",
+           branch.lty=8, 
+           shadow.col=0, 
+           nn=TRUE,
+           cex = 0.6)
 ```
 
 <img src="man/figures/README-binary-example-1.png" width="100%" />
@@ -330,7 +367,8 @@ fit_bin$Effects
 #>  1.2347340 -1.2410471 -1.2507165 -1.2090639
 ```
 
-Finally, we simulate test data and evaluate classification performance:
+Finally, we simulate test data and evaluate the classification
+performance:
 
 ``` r
 # Simulate test data
@@ -343,7 +381,7 @@ prob_test <- 1 / (1 + exp(-eta_test))
 Y_test <- rbinom(N_test, size = 1, prob = prob_test)
 
 # Predict
-Preds <- predict(fit_bin, newX = X_test, newY = Y_test, newZ = Z_test)
+Preds <- predict(fit_bin, newX = X_test, newZ = Z_test)
 
 # AUC
 if (!requireNamespace("pROC", quietly = TRUE)) install.packages("pROC")
@@ -354,16 +392,157 @@ library(pROC)
 #> The following objects are masked from 'package:stats':
 #> 
 #>     cov, smooth, var
-auc_result <- pROC::auc(Y_test, Preds$Ypred)
+auc_result <- pROC::auc(Y_test, Preds$Probs)
 #> Setting levels: control = 0, case = 1
 #> Setting direction: controls < cases
 auc_result
 #> Area under the curve: 0.9328
 ```
 
-This example demonstrates how to apply `fusedTree` to binary
-classification problems using logistic regression and prediction based
-on the estimated fused model.
+## Example 3: Survival Outcome
+
+We demonstrate how to apply `fusedTree` to time-to-event data using a
+Cox model. The tree is constructed using the
+[`partykit`](https://cran.r-project.org/package=partykit) package
+
+``` r
+library(fusedTree)
+library(partykit)
+if (!requireNamespace("survival", quietly = TRUE)) install.packages("survival")
+library(survival)
+
+# Simulation settings
+set.seed(14)
+N       <- 300
+p       <- 5
+p_Clin  <- 5
+betas   <- c(1, -1, 3, 2, -2)
+
+# Covariates
+Z <- as.data.frame(matrix(runif(N * p_Clin), nrow = N))  # clinical
+X <- matrix(rnorm(N * p), nrow = N)                      # omics
+
+# True hazard via linear predictor
+linpred <- 1 * (Z[,1] - 0.5)^2 +
+           3 * sin(Z[,1] * Z[,2]) +
+           2 * Z[,3] +
+           X %*% betas
+hazard <- exp(linpred)
+
+# Simulate survival times using exponential distribution
+time <- rexp(N, rate = hazard)
+censoring <- rexp(N, rate = 0.1)
+status <- as.numeric(time <= censoring)
+time <- pmin(time, censoring)
+
+# Create survival object
+Y_surv <- Surv(time, status)
+
+# Fit tree on clinical variables using partykit
+dat <- data.frame(time = time, status = status, Z)
+set.seed(4)
+Treefit <- ctree(Surv(time, status) ~ ., data = dat)
+plot(Treefit)
+```
+
+<img src="man/figures/README-survial-data-1.png" width="100%" />
+
+The tree splits on the variables 2 and 3 and has 3 leaf nodes.
+
+``` r
+# Cross-validation folds
+set.seed(15)
+folds <- CVfoldsTree(Y = Y_surv, Tree = Treefit, Z = Z,
+                     model = "cox", nrepeat = 1)
+
+# Tune penalties
+optPenalties <- PenOpt(Tree = Treefit, X = X, Y = Y_surv, Z = Z,
+                       model = "cox", lambdaInit = 10, alphaInit = 10,
+                       loss = "loglik", LinVars = TRUE,
+                       folds = folds, multistart = FALSE)
+#> Tuning fusedTree with fusion penalty
+optPenalties
+#>       lambda        alpha 
+#>    0.2230932 2845.6862257
+```
+
+Note that we now included **continuous** variables linearly in the model
+(see clinical design matrix). We only do so for continuous variables and
+not for ordinal/categorical variables. The reason is that trees can have
+difficulty in finding linear effects.
+
+``` r
+# Fit fusedTree
+fit_surv <- fusedTree(Tree = Treefit, X = X, Y = Y_surv, Z = Z,
+                      LinVars = TRUE, model = "cox",
+                      lambda = optPenalties[1],
+                      alpha = optPenalties[2],
+                      verbose = FALSE, maxIter = 100)
+#> Fit fusedTree with fusion penalty
+# effect size estimates
+fit_surv$Effects
+#>          N3          N4          N5          V1          V2          V3 
+#> -1.71655000 -1.25401359 -1.33805777  1.93671122  0.94286785  1.49490466 
+#>          V4          V5       x1_N3       x1_N4       x1_N5       x2_N3 
+#>  0.09727774  0.02108388  0.89034992  0.88613462  0.89072431 -1.03628669 
+#>       x2_N4       x2_N5       x3_N3       x3_N4       x3_N5       x4_N3 
+#> -1.03459334 -1.03548468  2.87728535  2.87089858  2.87371693  1.88795916 
+#>       x4_N4       x4_N5       x5_N3       x5_N4       x5_N5 
+#>  1.88787855  1.88628444 -2.00072538 -2.00353651 -1.99967049
+
+# Breslow estimates of baseline (cumulative) hazard
+Breslow <- fit_surv$Breslow
+```
+
+The fit now also contains the Breslow estimates of the baseline hazard
+and cumulative baseline hazard.
+
+Next, we compute the out-of-sample using the standard concordance index
+(C-index)
+
+``` r
+
+# Simulate test data
+N_test <- 100
+Z_test <- as.data.frame(matrix(runif(N_test * p_Clin), nrow = N_test))
+X_test <- matrix(rnorm(N_test * p), nrow = N_test)
+
+linpred_test <- 1 * (Z_test[,1] - 0.5) ^ 2 +
+                3 * sin(Z_test[,1] * Z_test[,2]) +
+                2 * Z_test[,3] +
+                X_test %*% betas
+hazard_test <- exp(linpred_test)
+time_test <- rexp(N_test, rate = hazard_test)
+censor_test <- rexp(N_test, rate = 0.1)
+status_test <- as.numeric(time_test <= censor_test)
+time_test <- pmin(time_test, censor_test)
+
+Y_test <- Surv(time_test, status_test)
+
+# Predict
+# We provide Y_test as well to compute the survival probabilities for the
+# time-points of the test response.
+Preds <- predict(fit_surv, newX = X_test, newY = Y_test,  newZ = Z_test)
+
+# The prediction now contain the linear predictor
+LinPred <- Preds$LinPred$LinPred
+
+# and the estimated survival probabilities for each subject (rows) per unique
+# time interval of the test set (columns).
+Survival <- Preds$Survival
+
+# We then compute the C-index by:
+LP <- -LinPred # required for concordance
+survival::concordance(Y_test ~ LP)$concordance
+#> [1] 0.9151928
+
+# and the time-dependent AUC by:
+if (!requireNamespace("survivalROC", quietly = TRUE)) install.packages("survivalROC")
+library(survivalROC)
+survivalROC::survivalROC.C(Stime = Y_test[,1], status = Y_test[,2],
+                           marker = LinPred, predict.time = median(Y_test[,1]))$AUC
+#> [1] 0.971439
+```
 
 ## Summary
 

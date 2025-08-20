@@ -4,7 +4,7 @@
 \alias{predict.fusedTree}
 \title{Predict Method for Fused Tree Models}
 \usage{
-\method{predict}{fusedTree}(object, newX, newZ, newY, ...)
+\method{predict}{fusedTree}(object, newX, newZ, newY = NULL, ...)
 }
 \arguments{
 \item{object}{An object of class \code{"fusedTree"} returned by the \code{\link{fusedTree}} function.}
@@ -13,21 +13,24 @@
 
 \item{newZ}{A data frame of new clinical covariates for prediction.}
 
-\item{newY}{A numeric response vector or a \code{\link[survival]{Surv}} object. For linear regression,
-and logistic regression, newY is only used to store predictions and response values together. For cox regression,
-newY is used to interpolate the baseline hazard to the event times of the test data.}
+\item{newY}{Optional input that is only used for survival response.
+Defaults to \code{NULL}. If provided, it should be a
+\code{\link[survival]{Surv}} object. In that case, \code{newY} is used
+to interpolate the baseline hazard to the event times of the test data.}
 
 \item{...}{Currently not used. Included for S3 method consistency.}
 }
 \value{
 A model-specific prediction object:
 \itemize{
-\item For \code{"linear"} models: a \code{data.frame} with columns \code{Resp} (observed responses) and \code{Ypred} (predicted values).
-\item For \code{"logistic"} models: a \code{data.frame} with columns \code{Resp} (observed labels), \code{Ypred} (predicted probabilities), and \code{LinPred} (linear predictor).
+\item For \code{"linear"} models: a \code{data.frame} with a single column \code{Ypred} (predicted values).
+\item For \code{"logistic"} models: a \code{data.frame} with columns
+\code{Probs} (predicted probabilities), and \code{LinPred} (linear predictor).
 \item For \code{"cox"} models: a \code{list} with two elements:
 \describe{
-\item{data}{A \code{data.frame} with columns \code{Resp} (a \code{Surv} object) and \code{LinPred}.}
-\item{Survival}{A matrix of predicted survival probabilities. Rows = test subjects, columns = unique times from \code{newY}.}
+\item{data}{A \code{data.frame} with a single column \code{LinPred} (linear predictor).}
+\item{Survival}{A matrix of predicted survival probabilities. Rows = test subjects, columns = unique times from \code{newY}.
+Only returned when \code{newY} is provided.}
 }
 }
 }
